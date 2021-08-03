@@ -1,4 +1,4 @@
-import sklearn
+from sklearn.ensemble import RandomForestRegressor
 import os
 import random
 import subprocess
@@ -21,6 +21,7 @@ class GA:
         self.pop_size = pop_size
         self.p_xo = p_xo
         self.p_elite = p_elite
+        self.rf = RandomForestRegressor()
 
     def init(self):
         # chromosome is formatted as [[genes],fitness], fitness is None when
@@ -81,14 +82,33 @@ class GA:
         for i in range(len(new_pop)):
             pop[i] = new_pop[i]
 
-
     def __local(self,ch):
-        changed = True
-        while changed:
-            changed = False
-            for i in range(len(ch)):
-                ch[i] = 0 if ch[i] == 1 else 0
-                # TODO
+        changed = False
+        # case : a lot of chromosomes that were XO'd will have None fitness
+        # we fill them with prediction from surrogate model first
+        if ch[1] is None:
+            ch[1] = self.rf.predict([ch[0]])[0]
+            changed = True
+
+        while True:
+            # has to be written this way or do an explicit deepcopy
+            neighbor = [[gene for gene in ch[0]] for _ in range(len(ch[0]))]
+            for i in range(len(ch[0])):
+                neighbor[i][i] = 1 if neighbor[i][i] == 0 else 0
+            pred = self.rf.predict(neighbor)
+            argmax, best_neighbor = max(enumerate(pred), key=lambda x:x[1])
+            if best_neighbor <= ch[1]:
+                # local search unsuccessful
+                break
+            # local search successful
+            changed = True
+            for i in range(len(ch[0])):
+                ch[0][i] = neighbor[argmax][i]
+            ch[1] = best_neighbor
+        
+        # invalidate the fitness prediction, ask for real evaluation instead
+        if changed:
+            ch[1] = None
 
     def __eval_pop(self,pop):
         # evaluate whole population and sort from fitness high to low
@@ -109,16 +129,26 @@ class GA:
         tmp = min([num for num in pop if num is not None])
         pop.sort(key=lambda x:x[1] if x[1] is not None else tmp-1, reverse=True)
 
+    def __train(self):
+        X,Y = list(zip(*self.pop))
+        #print(X)
+        #print(Y)
+        self.rf.fit(X,Y)
+
     def run(self,gen):
         self.init()
+        self.__train()
         for _ in range(gen):
             pop_a = self.pop[:int(len(self.pop)*self.p_elite)]
             pop_b = self.pop[int(len(self.pop)*self.p_elite):]
             self.__xo(pop_b)
+            for i in range(len(pop_b)):
+                self.__local(pop_b[i])
             self.pop = pop_a + pop_b
             self.__eval_pop(self.pop)
-            #print(self.pop)
             print(self.pop[0][1],self.pop[-1][1])
+            self.__train()
+
 
 
 def retr_gcc_flags():
