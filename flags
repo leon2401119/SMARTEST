@@ -1,6 +1,5 @@
 -faggressive-loop-optimizations
 -falign-functions
--functions
 -falign-jumps
 -falign-labels
 -falign-loops
@@ -21,9 +20,7 @@
 -fcprop-registers
 -fcrossjumping
 -fcse-follow-jumps
--follow-jumps
 -fcx-fortran-rules
--fortran-rules
 -fcx-limited-range
 -fdce
 -fdefer-pop
@@ -58,17 +55,13 @@
 -finline
 -finline-atomics
 -finline-functions
--functions
 -finline-functions-called-once
--functions-called-once
 -finline-small-functions
--functions
 -fipa-bit-cp
 -fipa-cp
 -fipa-cp-clone
 -fipa-icf
 -fipa-icf-functions
--functions
 -fipa-icf-variables
 -fipa-profile
 -fipa-pta
@@ -90,8 +83,6 @@
 -fkeep-gc-roots-live
 -flifetime-dse
 -flimit-function-alignment
--function-alignment
--flive-patching
 -flive-range-shrinkage
 -floop-interchange
 -floop-nest-optimize
@@ -105,7 +96,6 @@
 -fnon-call-exceptions
 -fnothrow-opt
 -fomit-frame-pointer
--frame-pointer
 -fopt-info
 -foptimize-sibling-calls
 -foptimize-strlen
@@ -115,7 +105,6 @@
 -fpeephole
 -fpeephole2
 -fplt
--fno-plt:
 -fpredictive-commoning
 -fprefetch-loop-arrays
 -fprintf-return-value
@@ -126,7 +115,6 @@
 -freorder-blocks
 -freorder-blocks-and-partition
 -freorder-functions
--functions
 -frerun-cse-after-loop
 -freschedule-modulo-scheduled-loops
 -frounding-math
@@ -147,7 +135,6 @@
 -fsched-stalled-insns-dep
 -fsched2-use-superblocks
 -fschedule-fusion
--fusion
 -fschedule-insns
 -fschedule-insns2
 -fsection-anchors
@@ -195,9 +182,7 @@
 -ftree-dominator-opts
 -ftree-dse
 -ftree-forwprop
--forwprop
 -ftree-fre
--fre
 -ftree-loop-distribute-patterns
 -ftree-loop-distribution
 -ftree-loop-if-convert
@@ -233,7 +218,6 @@
 -fvar-tracking-uninit
 -fvariable-expansion-in-unroller
 -fversion-loops-for-strides
--for-strides
 -fvpt
 -fweb
 -fwrapv
