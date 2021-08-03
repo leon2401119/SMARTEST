@@ -20,7 +20,10 @@ while True:
             elif output[cursor]==' ':
                 # this flag disables /causes trouble for other flags
                 if opt != '-flive-patching':
-                    print(opt,file=f)
+                    if opt[2:5] == 'no-': # -fno-xxx
+                        print(opt[5:],file=f)
+                    else:
+                        print(opt[2:],file=f)
                 #f.write(opt)
                 break
 

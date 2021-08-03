@@ -137,17 +137,17 @@ class GA:
 
     def run(self,gen):
         self.init()
-        self.__train()
+        #self.__train()
         for _ in range(gen):
             pop_a = self.pop[:int(len(self.pop)*self.p_elite)]
             pop_b = self.pop[int(len(self.pop)*self.p_elite):]
             self.__xo(pop_b)
-            for i in range(len(pop_b)):
-                self.__local(pop_b[i])
+            #for i in range(len(pop_b)):
+            #    self.__local(pop_b[i])
             self.pop = pop_a + pop_b
             self.__eval_pop(self.pop)
             print(self.pop[0][1],self.pop[-1][1])
-            self.__train()
+            #self.__train()
 
 
 
@@ -162,7 +162,10 @@ def get_fitness(ch,ch_num):
     cmd = ['gcc']
     for idx,bit in enumerate(bit_vector):
         if bit:
-            cmd.append(FLAGS[idx])
+            cmd.append('-f'+FLAGS[idx])
+        # FIXME : stack-protector cannot take -fno- form, thus causing compile error
+        elif 'stack-protector' not in FLAGS[idx]:
+            cmd.append('-fno-'+FLAGS[idx])
     file_list = glob.glob(os.path.join(CBENCH_PATH,TARGET,'src','*.c'))
     cmd.extend(file_list)
     cmd.extend(['-o',f'{TMP_DIR}/{ch_num}'])
@@ -179,6 +182,7 @@ def compile(cmd):
     # FIXME : is it possible to seperate them?
     if p.returncode:    # indicates compile err
         print(p.returncode,len(p.stdout),len(p.stderr))
+        print(p.stderr.decode('utf-8'))
         return False
     #output = subprocess.check_output(cmd).decode('utf-8')
     return True
