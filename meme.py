@@ -13,6 +13,7 @@ TMP_DIR = 'tmpfiles'
 FLAGS = None
 WORKERS = 4
 O0_SIZE = None
+Os_SIZE = None
 
 class GA:
     def __init__(self,ell,pop_size=200, p_xo=0.8, p_elite=0.1):
@@ -33,9 +34,11 @@ class GA:
         # prepare the base for rw selection
         # chromosomes that cause compile error will not be preserved at all
         adjusted_pop = [ch for ch in pop if ch[1] is not None]
+        adjust_value = 0
         if adjusted_pop[-1][1] < 0:
+            adjust_value = adjusted_pop[-1][1]
             for ch in adjusted_pop:
-                ch[1] -= adjusted_pop[-1][1] # pop is sorted by fitness already
+                ch[1] -= adjust_value # pop is sorted by fitness already
         
         total_fitness = 0
         for ch in adjusted_pop:
@@ -62,6 +65,12 @@ class GA:
                 parent_a[0][site:], parent_b[0][:site] = parent_b[0][site:], parent_a[0][:site]
                 parent_a[1], parent_b[1] = None, None
             
+            # revert from the skew made for rw-selection
+            if parent_a[1] is not None:
+                parent_a[1] += adjust_value
+            if parent_b[1] is not None:
+                parent_b[1] += adjust_value
+
             if len(new_pop) == len(pop)-1:  # correction when pop has odd number of chromosomes
                 new_pop.append(parent_a)
 
@@ -84,14 +93,17 @@ class GA:
     def __eval_pop(self,pop):
         # evaluate whole population and sort from fitness high to low
         pool = Pool(processes=WORKERS)
-        r = pool.starmap(get_fitness, [[ch,i] for i,ch in enumerate(pop) if ch[1] is None])
-        i1,i2 = 0,0
-        while i1<len(r):
-            if pop[i2][1] is None:
-                pop[i2][1] = r[i1]
-                i1 += 1
-            i2 += 1
+        workload = [[ch,i] for i,ch in enumerate(pop) if ch[1] is None]
+        #print(len(workload))
+        r = pool.starmap(get_fitness, workload)
+        for i in range(len(workload)):
+            pop[workload[i][1]][1] = r[i]
         
+        # testing purpose for single process
+        #for i,ch in enumerate(pop):
+        #    if ch[1] == None:
+        #        ch[1] = get_fitness(ch,i)
+
         #pop = list(zip(list(zip(*pop))[0],r))
         # tmp is used to sort None value to the back
         tmp = min([num for num in pop if num is not None])
@@ -105,6 +117,7 @@ class GA:
             self.__xo(pop_b)
             self.pop = pop_a + pop_b
             self.__eval_pop(self.pop)
+            #print(self.pop)
             print(self.pop[0][1],self.pop[-1][1])
 
 
@@ -128,7 +141,6 @@ def get_fitness(ch,ch_num):
 
     cmd = ['size',f'{TMP_DIR}/{ch_num}']
     size = get_size(cmd)
-
     return O0_SIZE - size
 
 def compile(cmd):
@@ -147,22 +159,30 @@ def get_size(cmd):
     stats = [int(i) for i in output.split('\n')[1].split('\t')[:3] if len(i)]
     return stats[0] + stats[1]
 
-def get_O0_size():
+def get_baseline_size():
     cmd = ['gcc','-O0']
     file_list = glob.glob(os.path.join(CBENCH_PATH,TARGET,'src','*.c'))
     cmd.extend(file_list)
     cmd.extend(['-o',f'{TMP_DIR}/O0'])
     if not compile(cmd):
-        return None
+        return False
+    cmd[1],cmd[-1] = '-Os',f'{TMP_DIR}/Os'
+    if not compile(cmd):
+        return False
     cmd = ['size',f'{TMP_DIR}/O0']
     global O0_SIZE
     O0_SIZE = get_size(cmd)
+    cmd[1] = f'{TMP_DIR}/Os'
+    global Os_SIZE
+    Os_SIZE = get_size(cmd)
+    return True
 
 def main():
     global FLAGS
     FLAGS = retr_gcc_flags()
-    get_O0_size()
-    ga = GA(len(FLAGS),10)
+    get_baseline_size()
+    print('Os Fitness : ' + str(O0_SIZE - Os_SIZE))
+    ga = GA(len(FLAGS),pop_size=200)
     ga.run(100)
 
 
