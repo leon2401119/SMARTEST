@@ -14,7 +14,7 @@ CBENCH_PATH = 'cBench_V1.1'
 TARGET = 'automotive_bitcount'
 TMP_DIR = 'tmpfiles'
 FLAGS = None
-WORKERS = 4
+WORKERS = 6
 O0_SIZE = None
 Os_SIZE = None
 
@@ -63,7 +63,27 @@ class GA:
         print("Best = {:.3f}".format(best))
         print('-------------------------------------------')
 
-    def __xo(self,pop):
+    def __xo(self,parent_a,parent_b):
+        self.__n_point_xo(parent_a,parent_b)
+
+    def __n_point_xo(self,parent_a,parent_b,n=1):
+        candidate_sites = [i for i in range(1,len(parent_a[0])-1)]
+        sites = random.sample(candidate_sites, n)
+        sites = [None] + sorted(sites) + [None]
+        parent_switch = False
+        for t in range(len(sites)-1):
+            if parent_switch:
+                parent_a[0][sites[t]:sites[t+1]], parent_b[0][sites[t]:sites[t+1]] = parent_b[0][sites[t]:sites[t+1]], parent_a[0][sites[t]:sites[t+1]]
+            parent_switch = not parent_switch
+
+        parent_a[1], parent_b[1] = None, None
+
+    def __selection(self,pop=None): # cannot do pop=self.pop, why??
+        if not pop:
+            pop = self.pop
+        self.__rw_selection(pop)
+
+    def __rw_selection(self,pop):
         # roulette-wheel
         # FIXME : what about negative value??
         # prepare the base for rw selection
@@ -96,10 +116,8 @@ class GA:
             parent_b = copy.deepcopy(adjusted_pop[i])
 
             if random.random() < self.p_xo: # do crossover (one-point for now)
-                site = random.randint(1,len(parent_a[0])-2)
-                parent_a[0][site:], parent_b[0][:site] = parent_b[0][site:], parent_a[0][:site]
-                parent_a[1], parent_b[1] = None, None
-            
+                self.__xo(parent_a,parent_b)
+
             # revert from the skew made for rw-selection
             if parent_a[1] is not None:
                 parent_a[1] += adjust_value
@@ -193,7 +211,7 @@ class GA:
         for _ in range(gen):
             pop_a = self.pop[:int(len(self.pop)*self.p_elite)]
             pop_b = self.pop[int(len(self.pop)*self.p_elite):]
-            self.__xo(pop_b)
+            self.__selection(pop_b)
             if self.meme:
                 for i in range(len(pop_b)):
                     self.__local(pop_b[i])
@@ -272,7 +290,7 @@ def main():
     get_baseline_size()
     print('Os Fitness : ' + str(O0_SIZE - Os_SIZE))
     ga = GA(len(FLAGS),pop_size=200,meme=False)
-    ga.run(100)
+    ga.run(1)
 
 
 if __name__=='__main__':
