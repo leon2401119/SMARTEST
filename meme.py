@@ -1,5 +1,7 @@
 from sklearn.ensemble import RandomForestRegressor
 from sklearn.metrics import mean_squared_error
+from scipy.stats.mstats import gmean
+from scipy import mean
 import os
 import random
 import subprocess
@@ -17,19 +19,49 @@ O0_SIZE = None
 Os_SIZE = None
 
 class GA:
-    def __init__(self,ell,pop_size=200, p_xo=0.8, p_elite=0.1):
+    def __init__(self,ell,pop_size=200, p_xo=0.8, p_elite=0.1,meme=True):
         self.ell = ell
         self.pop_size = pop_size
         self.p_xo = p_xo
         self.p_elite = p_elite
+        self.meme = meme
         self.rf = RandomForestRegressor()
         self.dataset = [[],[]]
 
     def init(self):
         # chromosome is formatted as [[genes],fitness], fitness is None when
         # the chromosomenot is not evaulated yet
+        print('Local Search : ',end='')
+        if self.meme:
+            print('ON')
+        else:
+            print('OFF')
         self.pop = [[[random.randint(0,1) for _ in range(self.ell)],None] for _ in range(self.pop_size)]
         self.__eval_pop(self.pop)
+
+    def report_diversity(self):
+        p_vec = [0 for _ in range(self.ell)]
+        for ch in self.pop:
+            for i,gene in enumerate(ch[0]):
+                p_vec[i] += gene
+        for i in range(self.ell):
+            p_vec[i] /= self.pop_size
+            p_vec[i] = (0.5 - abs(p_vec[i]-0.5))*200    # normalize 0.0 ~ 0.5 to 0 ~ 100, also 1.0 ~ 0.5
+
+        #worst = 1-max(p_vec) if 1-max(p_vec) < min(p_vec) else min(p_vec)
+        #best = 1
+        #for p in p_vec:
+        #    if abs(p-0.5) < abs(best-0.5):
+        #        best = p
+
+        best,worst = max(p_vec),min(p_vec)
+
+        print('------- population diversity report -------')
+        print("Geomean = {:.3f}".format(gmean(p_vec)))
+        print("Mean = {:.3f}".format(mean(p_vec)))
+        print("Worst = {:.3f}".format(worst))
+        print("Best = {:.3f}".format(best))
+        print('-------------------------------------------')
 
     def __xo(self,pop):
         # roulette-wheel
@@ -142,31 +174,36 @@ class GA:
     def __train(self):
         # this section only trains the current population, may yield suboptimal model
         # but does not encounter possible explosion in mem usage
-        X,Y = list(zip(*self.pop))
+        #X,Y = list(zip(*self.pop))
         #print(X)
         #print(Y)
-        self.rf.fit(X,Y)
+        #self.rf.fit(X,Y)
 
         # this tries to fit the entire seen dataset
-        #self.rf.fit(*self.dataset)
+        self.rf.fit(*self.dataset)
 
         rmse = mean_squared_error(self.dataset[1], self.rf.predict(self.dataset[0]), squared=False)
         print(f'rmse = {str(rmse)[:6]}')
 
     def run(self,gen):
         self.init()
-        #self.__train()
+        self.report_diversity()
+        if self.meme:
+            self.__train()
         for _ in range(gen):
             pop_a = self.pop[:int(len(self.pop)*self.p_elite)]
             pop_b = self.pop[int(len(self.pop)*self.p_elite):]
             self.__xo(pop_b)
-            #for i in range(len(pop_b)):
-            #    self.__local(pop_b[i])
+            if self.meme:
+                for i in range(len(pop_b)):
+                    self.__local(pop_b[i])
             self.pop = pop_a + pop_b
             self.__eval_pop(self.pop)
             percentage = str((Os_SIZE - O0_SIZE +  self.pop[0][1])*100/Os_SIZE)[:4]
             print(f'{self.pop[0][1]} ({percentage}%),{self.pop[-1][1]}')
-            #self.__train()
+            self.report_diversity()
+            if self.meme:
+                self.__train()
 
 
 def retr_gcc_flags():
@@ -234,8 +271,8 @@ def main():
     FLAGS = retr_gcc_flags()
     get_baseline_size()
     print('Os Fitness : ' + str(O0_SIZE - Os_SIZE))
-    ga = GA(len(FLAGS),pop_size=1000)
-    ga.run(30)
+    ga = GA(len(FLAGS),pop_size=200,meme=False)
+    ga.run(100)
 
 
 if __name__=='__main__':
