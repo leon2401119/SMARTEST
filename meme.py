@@ -1,4 +1,5 @@
 from sklearn.ensemble import RandomForestRegressor
+from sklearn.metrics import mean_squared_error
 import os
 import random
 import subprocess
@@ -22,6 +23,7 @@ class GA:
         self.p_xo = p_xo
         self.p_elite = p_elite
         self.rf = RandomForestRegressor()
+        self.dataset = [[],[]]
 
     def init(self):
         # chromosome is formatted as [[genes],fitness], fitness is None when
@@ -129,11 +131,27 @@ class GA:
         tmp = min([num for num in pop if num is not None])
         pop.sort(key=lambda x:x[1] if x[1] is not None else tmp-1, reverse=True)
 
+        # add only the "UNSEEN" chromosomes into dataset
+        # FIXME : is there a better way?
+        for ch in pop:
+            if ch[0] not in self.dataset[0]:
+                self.dataset[0].append(ch[0])
+                self.dataset[1].append(ch[1])
+
+
     def __train(self):
+        # this section only trains the current population, may yield suboptimal model
+        # but does not encounter possible explosion in mem usage
         X,Y = list(zip(*self.pop))
         #print(X)
         #print(Y)
         self.rf.fit(X,Y)
+
+        # this tries to fit the entire seen dataset
+        #self.rf.fit(*self.dataset)
+
+        rmse = mean_squared_error(self.dataset[1], self.rf.predict(self.dataset[0]), squared=False)
+        print(f'rmse = {str(rmse)[:6]}')
 
     def run(self,gen):
         self.init()
@@ -146,9 +164,9 @@ class GA:
             #    self.__local(pop_b[i])
             self.pop = pop_a + pop_b
             self.__eval_pop(self.pop)
-            print(self.pop[0][1],self.pop[-1][1])
+            percentage = str((Os_SIZE - O0_SIZE +  self.pop[0][1])*100/Os_SIZE)[:4]
+            print(f'{self.pop[0][1]} ({percentage}%),{self.pop[-1][1]}')
             #self.__train()
-
 
 
 def retr_gcc_flags():
@@ -216,8 +234,8 @@ def main():
     FLAGS = retr_gcc_flags()
     get_baseline_size()
     print('Os Fitness : ' + str(O0_SIZE - Os_SIZE))
-    ga = GA(len(FLAGS),pop_size=200)
-    ga.run(100)
+    ga = GA(len(FLAGS),pop_size=1000)
+    ga.run(30)
 
 
 if __name__=='__main__':
