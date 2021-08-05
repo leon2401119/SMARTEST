@@ -8,11 +8,13 @@ import subprocess
 import glob
 from multiprocessing import Pool
 import copy
-
+import matplotlib.pyplot as plt
 
 CBENCH_PATH = 'cBench_V1.1'
 TARGET = None
 TMP_DIR = 'tmpfiles'
+FIG_DIR = 'results/fig'
+BIN_DIR = 'results/bin'
 FLAGS = None
 WORKERS = 6
 O0_SIZE = None
@@ -41,9 +43,14 @@ class GA:
         # the chromosomenot is not evaulated yet
         self.pop = [[[random.randint(0,1) for _ in range(self.ell)],None] for _ in range(self.pop_size)]
         self.__eval_pop(self.pop)
+        self.statistics = []    # [[gen1_stats],[gen2_stats],...]
         return True
 
-    def report_diversity(self):
+    def __record_stats(self):
+        # stat = [max_fit,min_fit,diversity_gmean,diversity_mean,diversity_worst,diversity_best]
+        self.statistics.append([self.pop[0][1],self.pop[-1][1]] + self.report_diversity())
+
+    def report_diversity(self,stdout=False):
         p_vec = [0 for _ in range(self.ell)]
         for ch in self.pop:
             for i,gene in enumerate(ch[0]):
@@ -60,12 +67,41 @@ class GA:
 
         best,worst = max(p_vec),min(p_vec)
 
-        print('------- population diversity report -------')
-        print("Geomean = {:.3f}".format(gmean(p_vec)))
-        print("Mean = {:.3f}".format(mean(p_vec)))
-        print("Worst = {:.3f}".format(worst))
-        print("Best = {:.3f}".format(best))
-        print('-------------------------------------------')
+        if stdout:
+            print('------- population diversity report -------')
+            print("Geomean = {:.3f}".format(gmean(p_vec)))
+            print("Mean = {:.3f}".format(mean(p_vec)))
+            print("Worst = {:.3f}".format(worst))
+            print("Best = {:.3f}".format(best))
+            print('-------------------------------------------')
+
+        return [gmean(p_vec),mean(p_vec),worst,best]
+
+    def __plot(self):
+        x = list(range(len(self.statistics)))
+        max_fit,min_fit,gmean,mean,worst,best = list(zip(*self.statistics))
+
+        ax1 = plt.subplot2grid((3,3), (0,0), colspan=3, rowspan=2)
+        plt.ylabel('Fitness')
+
+        plt.plot(x,max_fit,label='Max')
+        plt.plot(x,min_fit,label='Min')
+        plt.axhline(Os_SIZE, color='black',linestyle = '--',label='Oz')
+        plt.legend(loc = 'lower right')
+
+        ax2 = plt.subplot2grid((3,3), (2,0), colspan=3, rowspan=1)
+        plt.xlabel('Generation')
+        plt.ylabel('Gene Diversity')
+        #plt.plot(x,gmean,label='GMean')
+        plt.plot(x,mean,label='Mean')
+        plt.plot(x,best,label='Best')
+        plt.plot(x,worst,label='Worst')
+        plt.legend(loc = 'lower right')
+
+        plt.tight_layout()
+        #plt.show()
+        gen = len(self.statistics)-1
+        plt.savefig(f'{FIG_DIR}/{TARGET}_{self.meme}_{gen}_{self.pop_size}_{self.p_xo}_{self.p_elite}.png')
 
     def __xo(self,parent_a,parent_b):
         self.__n_point_xo(parent_a,parent_b)
@@ -214,7 +250,8 @@ class GA:
             print(f'Fail to optimize "{TARGET}"')
             print('\n')
             return False
-        
+       
+        self.__record_stats()
         #self.report_diversity()
         if self.meme:
             self.__train()
@@ -227,12 +264,21 @@ class GA:
                     self.__local(pop_b[i])
             self.pop = pop_a + pop_b
             self.__eval_pop(self.pop)
-            percentage = str((Os_SIZE - O0_SIZE +  self.pop[0][1])*100/Os_SIZE)[:4]
-            print(f'Gen{g} : {self.pop[0][1]} ({percentage}%),{self.pop[-1][1]}')
+            percentage = (Os_SIZE - O0_SIZE +  self.pop[0][1])*100/Os_SIZE
+            self.__record_stats()
+            print("Gen_{} : {} ({:.2f}%),{}".format(g,self.pop[0][1],percentage,self.pop[-1][1]))
             #self.report_diversity()
             if self.meme:
                 self.__train()
 
+        # save the optimized binary & compile options
+        opt_cmd = get_cmd(self.pop[0][0],f'../{BIN_DIR}/{TARGET}_{self.meme}_{gen}_{self.pop_size}_{self.p_xo}_{self.p_elite}')
+        compile(opt_cmd)
+        with open(f'{BIN_DIR}/{TARGET}_{self.meme}_{gen}_{self.pop_size}_{self.p_xo}_{self.p_elite}.txt','w') as f:
+            for token in opt_cmd:
+                print(token,end=' ',file=f)
+        
+        self.__plot()
         print('\n')
         return True
 
@@ -301,6 +347,9 @@ def get_baseline_size():
     print('Os Fitness : ' + str(O0_SIZE - Os_SIZE))
     return True
 
+
+
+
 def main():
     global FLAGS
     FLAGS = retr_gcc_flags()
@@ -312,11 +361,8 @@ def main():
 
         # FIXME : about 15 of total 32 benchmarks will fail to compile(link) because of some library issues
         ga = GA(len(FLAGS),pop_size=200,meme=False)
-        if ga.run(5):
-            opt_cmd = get_cmd(ga.pop[0][0],f'../sol_{TARGET}')
-            compile(opt_cmd)
-            #print(opt_cmd)
-
+        ga.run(5)
+        break
 
 if __name__=='__main__':
     main()
