@@ -28,7 +28,7 @@ class GA:
         self.rf = RandomForestRegressor()
         self.dataset = [[],[]]
 
-    def init(self):
+    def __init(self):
         # chromosome is formatted as [[genes],fitness], fitness is None when
         # the chromosomenot is not evaulated yet
         print('Local Search : ',end='')
@@ -204,11 +204,11 @@ class GA:
         print(f'rmse = {str(rmse)[:6]}')
 
     def run(self,gen):
-        self.init()
-        self.report_diversity()
+        self.__init()
+        #self.report_diversity()
         if self.meme:
             self.__train()
-        for _ in range(gen):
+        for g in range(gen):
             pop_a = self.pop[:int(len(self.pop)*self.p_elite)]
             pop_b = self.pop[int(len(self.pop)*self.p_elite):]
             self.__selection(pop_b)
@@ -218,8 +218,8 @@ class GA:
             self.pop = pop_a + pop_b
             self.__eval_pop(self.pop)
             percentage = str((Os_SIZE - O0_SIZE +  self.pop[0][1])*100/Os_SIZE)[:4]
-            print(f'{self.pop[0][1]} ({percentage}%),{self.pop[-1][1]}')
-            self.report_diversity()
+            print(f'Gen{g} : {self.pop[0][1]} ({percentage}%),{self.pop[-1][1]}')
+            #self.report_diversity()
             if self.meme:
                 self.__train()
 
@@ -231,7 +231,15 @@ def retr_gcc_flags():
     return FLAGS[:-1]
 
 def get_fitness(ch,ch_num):
-    bit_vector = ch[0]
+    cmd = get_cmd(ch[0],ch_num)
+    if not compile(cmd):
+        return None
+
+    cmd = ['size',f'{TMP_DIR}/{ch_num}']
+    size = get_size(cmd)
+    return O0_SIZE - size
+
+def get_cmd(bit_vector,ch_num): # ch_num is used to avoid race condition on File System
     cmd = ['gcc']
     for idx,bit in enumerate(bit_vector):
         if bit:
@@ -242,12 +250,7 @@ def get_fitness(ch,ch_num):
     file_list = glob.glob(os.path.join(CBENCH_PATH,TARGET,'src','*.c'))
     cmd.extend(file_list)
     cmd.extend(['-o',f'{TMP_DIR}/{ch_num}'])
-    if not compile(cmd):
-        return None
-
-    cmd = ['size',f'{TMP_DIR}/{ch_num}']
-    size = get_size(cmd)
-    return O0_SIZE - size
+    return cmd
 
 def compile(cmd):
     p = subprocess.run(cmd,capture_output=True)
@@ -290,7 +293,10 @@ def main():
     get_baseline_size()
     print('Os Fitness : ' + str(O0_SIZE - Os_SIZE))
     ga = GA(len(FLAGS),pop_size=200,meme=False)
-    ga.run(1)
+    ga.run(30)
+    opt_cmd = get_cmd(ga.pop[0][0],f'../sol_{TARGET}')
+    compile(opt_cmd)
+    print(opt_cmd)
 
 
 if __name__=='__main__':
