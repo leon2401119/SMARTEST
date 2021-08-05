@@ -10,6 +10,7 @@ from multiprocessing import Pool
 import copy
 import matplotlib.pyplot as plt
 
+BASE_IS_OS = False
 CBENCH_PATH = 'cBench_V1.1'
 TARGET = None
 TMP_DIR = 'tmpfiles'
@@ -86,7 +87,7 @@ class GA:
 
         plt.plot(x,max_fit,label='Max')
         plt.plot(x,min_fit,label='Min')
-        plt.axhline(Os_SIZE, color='black',linestyle = '--',label='Oz')
+        plt.axhline(O0_SIZE - Os_SIZE, color='black',linestyle = '--',label='Os')
         plt.legend(loc = 'lower right')
 
         ax2 = plt.subplot2grid((3,3), (2,0), colspan=3, rowspan=1)
@@ -301,6 +302,8 @@ def get_fitness(ch,ch_num):
 
 def get_cmd(bit_vector,ch_num): # ch_num is used to avoid race condition on File System
     cmd = ['gcc']
+    if BASE_IS_OS:
+        cmd += ['-Os']
     for idx,bit in enumerate(bit_vector):
         if bit:
             cmd.append('-f'+FLAGS[idx])
