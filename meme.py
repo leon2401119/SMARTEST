@@ -218,7 +218,8 @@ class GA:
 
         #pop = list(zip(list(zip(*pop))[0],r))
         # tmp is used to sort None value to the back
-        tmp = min([num for num in pop if num is not None])
+        tmp = min([num[1] for num in pop if num[1] is not None])
+        #print(tmp)
         pop.sort(key=lambda x:x[1] if x[1] is not None else tmp-1, reverse=True)
 
         # add only the "UNSEEN" chromosomes into dataset
