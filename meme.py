@@ -11,7 +11,7 @@ import copy
 
 
 CBENCH_PATH = 'cBench_V1.1'
-TARGET = 'automotive_bitcount'
+TARGET = None
 TMP_DIR = 'tmpfiles'
 FLAGS = None
 WORKERS = 6
@@ -29,15 +29,19 @@ class GA:
         self.dataset = [[],[]]
 
     def __init(self):
-        # chromosome is formatted as [[genes],fitness], fitness is None when
-        # the chromosomenot is not evaulated yet
+        if not get_baseline_size():
+            return False
+
         print('Local Search : ',end='')
         if self.meme:
             print('ON')
         else:
             print('OFF')
+        # chromosome is formatted as [[genes],fitness], fitness is None when
+        # the chromosomenot is not evaulated yet
         self.pop = [[[random.randint(0,1) for _ in range(self.ell)],None] for _ in range(self.pop_size)]
         self.__eval_pop(self.pop)
+        return True
 
     def report_diversity(self):
         p_vec = [0 for _ in range(self.ell)]
@@ -204,7 +208,13 @@ class GA:
         print(f'rmse = {str(rmse)[:6]}')
 
     def run(self,gen):
-        self.__init()
+        print(f'Optimizing "{TARGET}"...')
+
+        if not self.__init():
+            print(f'Fail to optimize "{TARGET}"')
+            print('\n')
+            return False
+        
         #self.report_diversity()
         if self.meme:
             self.__train()
@@ -222,6 +232,9 @@ class GA:
             #self.report_diversity()
             if self.meme:
                 self.__train()
+
+        print('\n')
+        return True
 
 
 def retr_gcc_flags():
@@ -257,8 +270,8 @@ def compile(cmd):
     # in gcc, warnings and errors are clobbered in stderr for some reason
     # FIXME : is it possible to seperate them?
     if p.returncode:    # indicates compile err
-        print(p.returncode,len(p.stdout),len(p.stderr))
-        print(p.stderr.decode('utf-8'))
+        #print(p.returncode,len(p.stdout),len(p.stderr))
+        #print(p.stderr.decode('utf-8'))
         return False
     #output = subprocess.check_output(cmd).decode('utf-8')
     return True
@@ -285,18 +298,24 @@ def get_baseline_size():
     cmd[1] = f'{TMP_DIR}/Os'
     global Os_SIZE
     Os_SIZE = get_size(cmd)
+    print('Os Fitness : ' + str(O0_SIZE - Os_SIZE))
     return True
 
 def main():
     global FLAGS
     FLAGS = retr_gcc_flags()
-    get_baseline_size()
-    print('Os Fitness : ' + str(O0_SIZE - Os_SIZE))
-    ga = GA(len(FLAGS),pop_size=200,meme=False)
-    ga.run(30)
-    opt_cmd = get_cmd(ga.pop[0][0],f'../sol_{TARGET}')
-    compile(opt_cmd)
-    print(opt_cmd)
+    
+    global TARGET
+    f = glob.glob(os.path.join(CBENCH_PATH,'*','src/')) # get all folders under CBENCH_PATH
+    for d in f:
+        TARGET = os.path.basename(d[:-5]) # dispose of '/src/' to get the real folders
+
+        # FIXME : about 15 of total 32 benchmarks will fail to compile(link) because of some library issues
+        ga = GA(len(FLAGS),pop_size=200,meme=False)
+        if ga.run(5):
+            opt_cmd = get_cmd(ga.pop[0][0],f'../sol_{TARGET}')
+            compile(opt_cmd)
+            #print(opt_cmd)
 
 
 if __name__=='__main__':
