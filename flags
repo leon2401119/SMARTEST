@@ -119,7 +119,6 @@ rerun-cse-after-loop
 reschedule-modulo-scheduled-loops
 rounding-math
 rtti
-save-optimization-record
 sched-critical-path-heuristic
 sched-dep-count-heuristic
 sched-group-heuristic

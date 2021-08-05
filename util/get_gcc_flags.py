@@ -18,8 +18,9 @@ while True:
                 break
 
             elif output[cursor]==' ':
-                # this flag disables /causes trouble for other flags
-                if opt != '-flive-patching':
+                # 'live-patching' flag disables /causes trouble for other flags
+                # 'save-optimization-record' is useless as it only produces extra files in dir
+                if opt != '-flive-patching' and opt != '-fsave-optimization-record':
                     if opt[2:5] == 'no-': # -fno-xxx
                         print(opt[5:],file=f)
                     else:
