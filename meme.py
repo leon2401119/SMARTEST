@@ -322,7 +322,9 @@ def compile(cmd):
     if p.returncode:    # indicates compile err
         #print(p.returncode,len(p.stdout),len(p.stderr))
         #print(p.stderr.decode('utf-8'))
-        return False
+        # second chance to also link with math libraries
+        if subprocess.run(cmd+['-lm'],capture_output=True).returncode:
+            return False
     #output = subprocess.check_output(cmd).decode('utf-8')
     return True
 
