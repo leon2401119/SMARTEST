@@ -362,7 +362,6 @@ def main():
         # FIXME : about 15 of total 32 benchmarks will fail to compile(link) because of some library issues
         ga = GA(len(FLAGS),pop_size=200,meme=False)
         ga.run(5)
-        break
 
 if __name__=='__main__':
     main()
