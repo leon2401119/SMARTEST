@@ -54,9 +54,14 @@ class GA:
 
     def __record_stats(self):
         # stat = [max_fit,mean_fit,min_fit,diversity_gmean,diversity_mean,diversity_worst,diversity_best]
-        #mean_fitness = mean(list(zip(*self.pop))[1])
-        mean_fitness = gmean(list(zip(*self.pop))[1])
-        self.statistics.append([self.pop[0][1],mean_fitness,self.pop[-1][1]] + self.report_diversity())
+        # we have to do some little filtering here becuase some chromosomes may have None fitness
+        # even after eval phase simply because it won't compile somehow
+
+        filtered_fitness = [ch[1] for ch in self.pop if ch[1] is not None]
+
+        #mean_fitness = mean(filtered_fitness)
+        mean_fitness = gmean(filtered_fitness)
+        self.statistics.append([filtered_fitness[0],mean_fitness,filtered_fitness[-1]] + self.report_diversity())
 
     def report_diversity(self,stdout=False):
         p_vec = [0 for _ in range(self.ell)]
@@ -347,7 +352,7 @@ def compile(cmd):
         #print(p.returncode,len(p.stdout),len(p.stderr))
         # second chance to also link with math libraries
         if subprocess.run(cmd+['-lm'],capture_output=True).returncode:
-            #print(p.stderr.decode('utf-8'))
+            print(p.stderr.decode('utf-8'))
             return False
     #output = subprocess.check_output(cmd).decode('utf-8')
     return True
@@ -389,9 +394,14 @@ def main():
     for d in f:
         TARGET = os.path.basename(d[:-5]) # dispose of '/src/' to get the real folders
 
+        #TARGET = 'office_rsynth'
+        TARGET = 'consumer_jpeg_c'
+
         # FIXME : about 15 of total 32 benchmarks will fail to compile(link) because of some library issues
-        ga = GA(len(FLAGS),pop_size=50,meme=True)
+        ga = GA(len(FLAGS),pop_size=50,meme=False)
         ga.run(5)
+
+        return
 
 
 if __name__=='__main__':
