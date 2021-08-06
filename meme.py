@@ -53,8 +53,10 @@ class GA:
         return True
 
     def __record_stats(self):
-        # stat = [max_fit,min_fit,diversity_gmean,diversity_mean,diversity_worst,diversity_best]
-        self.statistics.append([self.pop[0][1],self.pop[-1][1]] + self.report_diversity())
+        # stat = [max_fit,mean_fit,min_fit,diversity_gmean,diversity_mean,diversity_worst,diversity_best]
+        #mean_fitness = mean(list(zip(*self.pop))[1])
+        mean_fitness = gmean(list(zip(*self.pop))[1])
+        self.statistics.append([self.pop[0][1],mean_fitness,self.pop[-1][1]] + self.report_diversity())
 
     def report_diversity(self,stdout=False):
         p_vec = [0 for _ in range(self.ell)]
@@ -85,13 +87,14 @@ class GA:
 
     def __plot(self):
         x = list(range(len(self.statistics)))
-        max_fit,min_fit,gmean,mean,worst,best = list(zip(*self.statistics))
+        max_fit,mean_fit,min_fit,gmean,mean,worst,best = list(zip(*self.statistics))
 
         ax1 = plt.subplot2grid((3,3), (0,0), colspan=3, rowspan=2)
         plt.ylabel('Fitness')
 
         plt.plot(x,max_fit,label='Max')
-        plt.plot(x,min_fit,label='Min')
+        plt.plot(x,mean_fit,label='Mean')
+        #plt.plot(x,min_fit,label='Min')
         if self.meme and ADVANCED_STATS:
             plt.plot(x[1:],self.adv_statistics,label='Est')  # we don't have the data in init phase (gen 0) yet
         plt.axhline(O0_SIZE - Os_SIZE, color='black',linestyle = '--',label='Os')
