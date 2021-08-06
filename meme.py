@@ -10,14 +10,18 @@ from multiprocessing import Pool
 import copy
 import matplotlib.pyplot as plt
 
+# Settings & Tunables
 BASE_IS_OS = True
 CBENCH_PATH = 'cBench_V1.1'
 TARGET = None
 TMP_DIR = 'tmpfiles'
 FIG_DIR = 'results/fig'
 BIN_DIR = 'results/bin'
-FLAGS = None
 WORKERS = 6
+ADVANCED_STATS = True
+
+# Global Variables
+FLAGS = None
 O0_SIZE = None
 Os_SIZE = None
 
@@ -45,6 +49,7 @@ class GA:
         self.pop = [[[random.randint(0,1) for _ in range(self.ell)],None] for _ in range(self.pop_size)]
         self.__eval_pop(self.pop)
         self.statistics = []    # [[gen1_stats],[gen2_stats],...]
+        self.adv_statistics = []
         return True
 
     def __record_stats(self):
@@ -87,6 +92,8 @@ class GA:
 
         plt.plot(x,max_fit,label='Max')
         plt.plot(x,min_fit,label='Min')
+        if self.meme and ADVANCED_STATS:
+            plt.plot(x[1:],self.adv_statistics,label='Est')  # we don't have the data in init phase (gen 0) yet
         plt.axhline(O0_SIZE - Os_SIZE, color='black',linestyle = '--',label='Os')
         plt.legend(loc = 'lower right')
 
@@ -199,9 +206,14 @@ class GA:
                 ch[0][i] = neighbor[argmax][i]
             ch[1] = best_neighbor
         
+        est_fitness = ch[1]
+
         # invalidate the fitness prediction, ask for real evaluation instead
         if changed:
             ch[1] = None
+
+        # returns the estimated fitness (real or predicted)
+        return est_fitness
 
     def __eval_pop(self,pop):
         # evaluate whole population and sort from fitness high to low
@@ -226,7 +238,11 @@ class GA:
         # add only the "UNSEEN" chromosomes into dataset
         # FIXME : is there a better way?
         for ch in pop:
-            if ch[0] not in self.dataset[0]:
+            if ch[0] not in self.dataset[0] and ch[1] is not None:
+                # some benchmarks (e.g. tiff2rgba) will occasionally get compile err
+                # for specific chromosomes, so filter it out here
+                # turns out it is cBench_V1.1/consumer_tiff2rgba/src/tif_fax3.c:1507:1: internal compiler error: Segmentation fault
+                # WTF is this shit?
                 self.dataset[0].append(ch[0])
                 self.dataset[1].append(ch[1])
 
@@ -262,8 +278,13 @@ class GA:
             pop_b = self.pop[int(len(self.pop)*self.p_elite):]
             self.__selection(pop_b)
             if self.meme:
+                est_record = []
                 for i in range(len(pop_b)):
-                    self.__local(pop_b[i])
+                    est_record.append(self.__local(pop_b[i]))
+                    
+                if ADVANCED_STATS:
+                    self.adv_statistics.append(mean(est_record))
+
             self.pop = pop_a + pop_b
             self.__eval_pop(self.pop)
             percentage = (Os_SIZE - O0_SIZE +  self.pop[0][1])*100/Os_SIZE
@@ -321,9 +342,9 @@ def compile(cmd):
     # FIXME : is it possible to seperate them?
     if p.returncode:    # indicates compile err
         #print(p.returncode,len(p.stdout),len(p.stderr))
-        #print(p.stderr.decode('utf-8'))
         # second chance to also link with math libraries
         if subprocess.run(cmd+['-lm'],capture_output=True).returncode:
+            #print(p.stderr.decode('utf-8'))
             return False
     #output = subprocess.check_output(cmd).decode('utf-8')
     return True
@@ -366,8 +387,8 @@ def main():
         TARGET = os.path.basename(d[:-5]) # dispose of '/src/' to get the real folders
 
         # FIXME : about 15 of total 32 benchmarks will fail to compile(link) because of some library issues
-        ga = GA(len(FLAGS),pop_size=200,meme=True)
-        ga.run(50)
+        ga = GA(len(FLAGS),pop_size=50,meme=True)
+        ga.run(5)
 
 
 if __name__=='__main__':
