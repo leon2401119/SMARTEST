@@ -10,7 +10,7 @@ from multiprocessing import Pool
 import copy
 import matplotlib.pyplot as plt
 
-BASE_IS_OS = False
+BASE_IS_OS = True
 CBENCH_PATH = 'cBench_V1.1'
 TARGET = None
 TMP_DIR = 'tmpfiles'
@@ -102,7 +102,7 @@ class GA:
         plt.tight_layout()
         #plt.show()
         gen = len(self.statistics)-1
-        plt.savefig(f'{FIG_DIR}/{TARGET}_{self.meme}_{gen}_{self.pop_size}_{self.p_xo}_{self.p_elite}.png')
+        plt.savefig(f'{FIG_DIR}/{TARGET}_{self.meme}_{BASE_IS_OS}_{gen}_{self.pop_size}_{self.p_xo}_{self.p_elite}.png')
 
     def __xo(self,parent_a,parent_b):
         self.__n_point_xo(parent_a,parent_b)
@@ -274,9 +274,9 @@ class GA:
                 self.__train()
 
         # save the optimized binary & compile options
-        opt_cmd = get_cmd(self.pop[0][0],f'../{BIN_DIR}/{TARGET}_{self.meme}_{gen}_{self.pop_size}_{self.p_xo}_{self.p_elite}')
+        opt_cmd = get_cmd(self.pop[0][0],f'../{BIN_DIR}/{TARGET}_{self.meme}_{BASE_IS_OS}_{gen}_{self.pop_size}_{self.p_xo}_{self.p_elite}')
         compile(opt_cmd)
-        with open(f'{BIN_DIR}/{TARGET}_{self.meme}_{gen}_{self.pop_size}_{self.p_xo}_{self.p_elite}.txt','w') as f:
+        with open(f'{BIN_DIR}/{TARGET}_{self.meme}_{BASE_IS_OS}_{gen}_{self.pop_size}_{self.p_xo}_{self.p_elite}.txt','w') as f:
             for token in opt_cmd:
                 print(token,end=' ',file=f)
         
@@ -366,8 +366,9 @@ def main():
         TARGET = os.path.basename(d[:-5]) # dispose of '/src/' to get the real folders
 
         # FIXME : about 15 of total 32 benchmarks will fail to compile(link) because of some library issues
-        ga = GA(len(FLAGS),pop_size=200,meme=False)
-        ga.run(5)
+        ga = GA(len(FLAGS),pop_size=200,meme=True)
+        ga.run(50)
+
 
 if __name__=='__main__':
     main()
