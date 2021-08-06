@@ -394,14 +394,9 @@ def main():
     for d in f:
         TARGET = os.path.basename(d[:-5]) # dispose of '/src/' to get the real folders
 
-        #TARGET = 'office_rsynth'
-        TARGET = 'consumer_jpeg_c'
-
         # FIXME : about 15 of total 32 benchmarks will fail to compile(link) because of some library issues
-        ga = GA(len(FLAGS),pop_size=50,meme=False)
-        ga.run(5)
-
-        return
+        ga = GA(len(FLAGS),pop_size=100,meme=False)
+        ga.run(50)
 
 
 if __name__=='__main__':
