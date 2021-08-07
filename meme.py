@@ -272,6 +272,7 @@ class GA:
         print(f'rmse = {str(rmse)[:6]}')
 
     def run(self,gen):
+        self.gen = gen
         print(f'Optimizing "{TARGET}"...')
 
         if not self.__init():
@@ -401,10 +402,12 @@ def main():
 
         # FIXME : about 15 of total 32 benchmarks will fail to compile(link) because of some library issues
         ga = GA(len(FLAGS),pop_size=10,meme=False)
-        if ga.run(3):
+        if ga.run(1):
             csv_output.append([TARGET,O0_SIZE,Os_SIZE,O0_SIZE-ga.pop[0][1]])
+        else:
+            csv_output.append([TARGET,'-','-','-'])
 
-    with open(f'{CSV_DIR}/output.csv', 'w', newline='') as csvfile:
+    with open(f'{CSV_DIR}/{ga.meme}_{BASE_IS_OS}_{ga.gen}_{ga.pop_size}_{ga.p_xo}_{ga.p_elite}.csv', 'w', newline='') as csvfile:
         writer = csv.writer(csvfile)
         writer.writerows(csv_output)
 
