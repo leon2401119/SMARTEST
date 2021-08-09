@@ -7,6 +7,7 @@ Best of luck to me, and wishing myself a smoother road to graduation XD
 2021/08/03 
 
 ## Usage  
-cd SMARTEST  
-python util/get_gcc_flags.py  
+cd SMARTEST/util  
+python get_gcc_flags.py  
+cd ..
 python meme.py  
