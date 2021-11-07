@@ -19,7 +19,7 @@ TMP_DIR = 'tmpfiles'
 FIG_DIR = 'results/fig'
 BIN_DIR = 'results/bin'
 CSV_DIR = 'results'
-WORKERS = 6
+WORKERS = 15
 ADVANCED_STATS = True
 
 # Global Variables
@@ -401,8 +401,8 @@ def main():
         TARGET = os.path.basename(d[:-5]) # dispose of '/src/' to get the real folders
 
         # FIXME : about 15 of total 32 benchmarks will fail to compile(link) because of some library issues
-        ga = GA(len(FLAGS),pop_size=10,meme=False)
-        if ga.run(1):
+        ga = GA(len(FLAGS),pop_size=100,meme=False)
+        if ga.run(50):
             csv_output.append([TARGET,O0_SIZE,Os_SIZE,O0_SIZE-ga.pop[0][1]])
         else:
             csv_output.append([TARGET,'-','-','-'])
